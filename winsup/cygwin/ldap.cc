@@ -98,6 +98,7 @@ PWCHAR rfc2307_gid_attr[] =
 void
 cygheap_pwdgrp::init_ldap_user_attr ()
 {
+small_printf("a1\n");
   ldap_user_attr = (PWCHAR *)
     ccalloc_abort (HEAP_BUF, sizeof (std_user_attr) / sizeof (*std_user_attr)
 			     + 3 * NSS_SCHEME_MAX + 1, sizeof (PWCHAR));
@@ -121,6 +122,7 @@ cygheap_pwdgrp::init_ldap_user_attr ()
 inline int
 cyg_ldap::map_ldaperr_to_errno (ULONG lerr)
 {
+small_printf("a2\n");
   switch (lerr)
     {
     case LDAP_SUCCESS:
@@ -140,6 +142,7 @@ cyg_ldap::map_ldaperr_to_errno (ULONG lerr)
 inline int
 cyg_ldap::wait (cygthread *thr)
 {
+small_printf("a3\n");
   if (!thr)
     return EIO;
   if (cygwait (*thr, cw_infinite, cw_sig | cw_sig_restart) != WAIT_OBJECT_0)
@@ -165,6 +168,7 @@ struct cyg_ldap_init {
 ULONG
 cyg_ldap::connect_ssl (PCWSTR domain)
 {
+small_printf("a4\n");
   ULONG ret;
 
   if (!(lh = ldap_sslinitW ((PWCHAR) domain, LDAP_SSL_PORT, 1)))
@@ -185,6 +189,7 @@ cyg_ldap::connect_ssl (PCWSTR domain)
 ULONG
 cyg_ldap::connect_non_ssl (PCWSTR domain)
 {
+small_printf("a5\n");
   ULONG ret;
 
   if (!(lh = ldap_initW ((PWCHAR) domain, LDAP_PORT)))
@@ -211,6 +216,7 @@ cyg_ldap::connect_non_ssl (PCWSTR domain)
 static DWORD WINAPI
 ldap_init_thr (LPVOID param)
 {
+small_printf("a6\n");
   cyg_ldap_init *cl = (cyg_ldap_init *) param;
   cl->ret = cl->ssl ? cl->that->connect_ssl (cl->domain)
 		    : cl->that->connect_non_ssl (cl->domain);
@@ -220,6 +226,7 @@ ldap_init_thr (LPVOID param)
 inline int
 cyg_ldap::connect (PCWSTR domain)
 {
+small_printf("a7\n");
   /* FIXME?  connect_ssl can take ages even when failing, so we're trying to
      do everything the non-SSL (but still encrypted) way. */
   cyg_ldap_init cl = { this, domain, false, NO_ERROR };
@@ -243,6 +250,7 @@ struct cyg_ldap_search {
 ULONG
 cyg_ldap::search_s (PWCHAR base, ULONG scope, PWCHAR filter, PWCHAR *attrs)
 {
+small_printf("a8\n");
   ULONG ret;
   
   if ((ret = ldap_search_sW (lh, base, scope, filter, attrs, 0, &msg))
@@ -254,6 +262,7 @@ cyg_ldap::search_s (PWCHAR base, ULONG scope, PWCHAR filter, PWCHAR *attrs)
 static DWORD WINAPI
 ldap_search_thr (LPVOID param)
 {
+small_printf("a9\n");
   cyg_ldap_search *cl = (cyg_ldap_search *) param;
   cl->ret = cl->that->search_s (cl->base, cl->scope, cl->filter, cl->attrs);
   return 0;
@@ -262,6 +271,7 @@ ldap_search_thr (LPVOID param)
 inline int
 cyg_ldap::search (PWCHAR base, ULONG scope, PWCHAR filter, PWCHAR *attrs)
 {
+small_printf("aa\n");
   cyg_ldap_search cl = { this, base, scope, filter, attrs, NO_ERROR };
   cygthread *thr = new cygthread (ldap_search_thr, &cl, "ldap_search");
   return wait (thr) ?: map_ldaperr_to_errno (cl.ret);
@@ -279,6 +289,7 @@ struct cyg_ldap_next_page {
 ULONG
 cyg_ldap::next_page_s ()
 {
+small_printf("ab\n");
   ULONG total;
   ULONG ret;
   
@@ -296,6 +307,7 @@ cyg_ldap::next_page_s ()
 static DWORD WINAPI
 ldap_next_page_thr (LPVOID param)
 {
+small_printf("ac\n");
   cyg_ldap_next_page *cl = (cyg_ldap_next_page *) param;
   cl->ret = cl->that->next_page_s ();
   return 0;
@@ -304,6 +316,7 @@ ldap_next_page_thr (LPVOID param)
 inline int
 cyg_ldap::next_page ()
 {
+small_printf("ad\n");
   cyg_ldap_next_page cl = { this, NO_ERROR };
   cygthread *thr = new cygthread (ldap_next_page_thr, &cl, "ldap_next_page");
   return wait (thr) ?: map_ldaperr_to_errno (cl.ret);
@@ -316,6 +329,7 @@ cyg_ldap::next_page ()
 int
 cyg_ldap::open (PCWSTR domain)
 {
+small_printf("ae\n");
   int ret = NO_ERROR;
 
   /* Already open? */
@@ -365,6 +379,7 @@ err:
 void
 cyg_ldap::close ()
 {
+small_printf("af\n");
   if (srch_id != NULL)
     ldap_search_abandon_page (lh, srch_id);
   if (lh)
@@ -386,6 +401,7 @@ cyg_ldap::close ()
 PWCHAR
 cyg_ldap::get_string_attribute (PCWSTR name)
 {
+small_printf("ag\n");
   if (val)
     ldap_value_freeW (val);
   val = ldap_get_valuesW (lh, entry, (PWCHAR) name);
@@ -397,6 +413,7 @@ cyg_ldap::get_string_attribute (PCWSTR name)
 uint32_t
 cyg_ldap::get_num_attribute (PCWSTR name)
 {
+small_printf("ah\n");
   PWCHAR ret = get_string_attribute (name);
   if (ret)
     return (uint32_t) wcstoul (ret, NULL, 10);
@@ -413,6 +430,7 @@ cyg_ldap::get_num_attribute (PCWSTR name)
 bool
 cyg_ldap::fetch_ad_account (PSID sid, bool group, PCWSTR domain)
 {
+small_printf("ai\n");
   WCHAR filter[sizeof (ACCOUNT_FILTER_START) + sizeof (ACCOUNT_FILTER_END)
 	       + 3 * SECURITY_MAX_SID_SIZE + 1];
   PWCHAR f, base = NULL;
@@ -486,6 +504,7 @@ cyg_ldap::fetch_ad_account (PSID sid, bool group, PCWSTR domain)
 int
 cyg_ldap::enumerate_ad_accounts (PCWSTR domain, bool group)
 {
+small_printf("aj\n");
   int ret;
   tmp_pathbuf tp;
   PCWSTR filter;
@@ -530,6 +549,7 @@ cyg_ldap::enumerate_ad_accounts (PCWSTR domain, bool group)
 int
 cyg_ldap::next_account (cygsid &sid)
 {
+small_printf("ak\n");
   ULONG ret;
   PLDAP_BERVAL *bval;
 
@@ -572,6 +592,7 @@ cyg_ldap::next_account (cygsid &sid)
 uint32_t
 cyg_ldap::fetch_posix_offset_for_domain (PCWSTR domain)
 {
+small_printf("al\n");
   WCHAR base[wcslen (def_context) + sizeof (SYSTEM_CONTAINER) / sizeof (WCHAR)];
   WCHAR filter[sizeof (PSX_OFFSET_FILTER_FLAT) + wcslen (domain) + 1];
 
@@ -613,6 +634,7 @@ cyg_ldap::fetch_posix_offset_for_domain (PCWSTR domain)
 bool
 cyg_ldap::fetch_unix_sid_from_ad (uint32_t id, cygsid &sid, bool group)
 {
+small_printf("am\n");
   WCHAR filter[MAX (sizeof (UXID_FILTER_GRP), sizeof (UXID_FILTER_USR)) + 16];
   PLDAP_BERVAL *bval;
 
@@ -643,6 +665,7 @@ cyg_ldap::fetch_unix_sid_from_ad (uint32_t id, cygsid &sid, bool group)
 PWCHAR
 cyg_ldap::fetch_unix_name_from_rfc2307 (uint32_t id, bool group)
 {
+small_printf("an\n");
   WCHAR filter[MAX (sizeof (PSXID_FILTER_GRP), sizeof (PSXID_FILTER_USR)) + 16];
 
   if (msg)
@@ -670,6 +693,7 @@ cyg_ldap::fetch_unix_name_from_rfc2307 (uint32_t id, bool group)
 uid_t
 cyg_ldap::remap_uid (uid_t uid)
 {
+small_printf("ao\n");
   cygsid user (NO_SID);
   PWCHAR name;
   struct passwd *pw;
@@ -694,6 +718,7 @@ cyg_ldap::remap_uid (uid_t uid)
 gid_t
 cyg_ldap::remap_gid (gid_t gid)
 {
+small_printf("ap\n");
   cygsid group (NO_SID);
   PWCHAR name;
   struct group *gr;
